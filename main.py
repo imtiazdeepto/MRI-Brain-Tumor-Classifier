@@ -26,7 +26,7 @@ from inference import load_model, run_inference
 # Paths
 # ---------------------------------------------------------------------------
 BASE_DIR   = Path(__file__).parent
-WEIGHTS    = BASE_DIR / "litebrainnet_final.pth"
+WEIGHTS    = BASE_DIR / "KD_T6.0_a0.8_latest.pth"
 STATIC_DIR = BASE_DIR / "static"
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
     """Load model on startup; release on shutdown."""
     if not WEIGHTS.exists():
         logger.error(
-            "Weights file not found: %s  —  Place litebrainnet_final.pth "
+            "Weights file not found: %s  —  Place KD_T6.0_a0.8_latest.pth "
             "in the same directory as main.py.",
             WEIGHTS,
         )

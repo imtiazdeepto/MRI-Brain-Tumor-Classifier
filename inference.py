@@ -63,30 +63,30 @@ class CustomCNN5_Brain(nn.Module):
         self.features = nn.Sequential(
             # Block 1: 3 → 8   output: 120×120
             nn.Conv2d(3,   8,  kernel_size=3, padding=1),  # [0]
-            nn.ReLU(inplace=True),                          # [1]
+            nn.ReLU(),                          # [1]
             nn.MaxPool2d(2, 2),                             # [2]
             # Block 2: 8 → 16  output: 60×60
             nn.Conv2d(8,  16,  kernel_size=3, padding=1),  # [3]
-            nn.ReLU(inplace=True),                          # [4]
+            nn.ReLU(),                          # [4]
             nn.MaxPool2d(2, 2),                             # [5]
             # Block 3: 16 → 32 output: 30×30
             nn.Conv2d(16, 32,  kernel_size=3, padding=1),  # [6]
-            nn.ReLU(inplace=True),                          # [7]
+            nn.ReLU(),                          # [7]
             nn.MaxPool2d(2, 2),                             # [8]
             # Block 4: 32 → 64 output: 15×15
             nn.Conv2d(32, 64,  kernel_size=3, padding=1),  # [9]
-            nn.ReLU(inplace=True),                          # [10]
+            nn.ReLU(),                          # [10]
             nn.MaxPool2d(2, 2),                             # [11]
             # Block 5: 64 → 128  ← Grad-CAM++ target layer (features[12])
             # output: 15×15 (before ReLU/pool), 7×7 (after pool)
             nn.Conv2d(64, 128, kernel_size=3, padding=1),  # [12]  ← TARGET
-            nn.ReLU(inplace=True),                          # [13]
+            nn.ReLU(),                          # [13]
             nn.MaxPool2d(2, 2),                             # [14]
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),           # 6272
             nn.Linear(6272, 64),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(64, 4),
         )
@@ -101,7 +101,14 @@ class CustomCNN5_Brain(nn.Module):
 def load_model(weights_path: Path) -> CustomCNN5_Brain:
     """Instantiate the model, load state dict, set to eval mode on CPU."""
     model = CustomCNN5_Brain()
-    state_dict = torch.load(weights_path, map_location="cpu")
+    checkpoint = torch.load(weights_path, map_location="cpu")
+    
+    # Handle both raw state_dict and the training notebook's checkpoint dictionary
+    if isinstance(checkpoint, dict) and "model_state" in checkpoint:
+        state_dict = checkpoint["model_state"]
+    else:
+        state_dict = checkpoint
+        
     model.load_state_dict(state_dict)
     model.eval()
     logger.info("Model loaded from %s", weights_path)
@@ -224,13 +231,13 @@ def _compute_gradcam_pp(
     fh = target_layer.register_forward_hook(_fwd_hook)
     bh = target_layer.register_full_backward_hook(_bwd_hook)
 
+    if not input_tensor.requires_grad:
+        input_tensor.requires_grad_(True)
+
     model.zero_grad()
     output = model(input_tensor)            # full forward; graph is live
     score  = output[0, class_idx]
     score.backward()                        # propagate gradients
-
-    fh.remove()
-    bh.remove()
 
     A     = activation_store["A"]           # [1, C, h, w]
     grads = gradient_store["dA"]            # [1, C, h, w]
@@ -256,6 +263,15 @@ def _compute_gradcam_pp(
         cam = (cam - lo) / (hi - lo)
     else:
         cam = np.zeros_like(cam)
+
+    # Clean up hooks
+    fh.remove()
+    bh.remove()
+
+    # Explicitly free memory and clear computation graph to prevent VRAM leaks
+    del output, score, A, grads, rg, rg2, rg3, sum_A_rg3, alpha, weights
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return cam
 
