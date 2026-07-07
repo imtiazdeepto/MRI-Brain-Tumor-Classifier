@@ -109,8 +109,8 @@ async def predict(file: UploadFile = File(..., description="Brain MRI image file
     CustomCNN5_Brain model, and return:
 
     - **predicted_class**: one of `glioma`, `meningioma`, `notumor`, `pituitary`
-    - **confidence**: softmax probability for the predicted class (0 – 1)
     - **heatmap_image**: base64-encoded PNG of the Grad-CAM++ overlay
+    - **lime_image**: base64-encoded PNG of the LIME explanation overlay
     """
     # --- Validate MIME type --------------------------------------------------
     if not file.content_type or not file.content_type.startswith("image/"):

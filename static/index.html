@@ -171,30 +171,6 @@
               <p class="dx-description" id="dx-description">—</p>
             </div>
 
-            <!-- Circular confidence ring -->
-            <div class="confidence-ring-wrap" aria-label="Confidence score">
-              <svg
-                class="conf-ring-svg"
-                viewBox="0 0 80 80"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle class="ring-track" cx="40" cy="40" r="33"/>
-                <circle class="ring-progress" id="ring-progress" cx="40" cy="40" r="33"/>
-              </svg>
-              <div class="ring-center">
-                <span class="ring-pct" id="ring-pct">—</span>
-                <span class="ring-label">confidence</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Linear bar (secondary visual) -->
-          <div class="conf-bar-row" aria-hidden="true">
-            <div class="conf-bar-track">
-              <div class="conf-bar-fill" id="conf-bar-fill"></div>
-            </div>
-            <span class="conf-bar-pct" id="conf-bar-pct">0%</span>
           </div>
         </div>
 
@@ -211,6 +187,13 @@
             <p class="img-hint">Regions influencing the prediction</p>
             <div class="img-frame">
               <img id="result-heatmap" src="" alt="Grad-CAM++ heatmap overlaid on MRI" />
+            </div>
+          </div>
+          <div class="card img-card">
+            <p class="img-label">LIME Explanation</p>
+            <p class="img-hint">Superpixel boundaries</p>
+            <div class="img-frame">
+              <img id="result-lime" src="" alt="LIME visual explanation on MRI" />
             </div>
           </div>
         </div>

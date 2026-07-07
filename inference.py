@@ -26,6 +26,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
+from lime import lime_image
+from skimage.segmentation import mark_boundaries
 
 logger = logging.getLogger(__name__)
 
@@ -309,6 +311,54 @@ def _create_overlay(original_rgb: np.ndarray, cam: np.ndarray) -> str:
 
 
 # ---------------------------------------------------------------------------
+# LIME Explanation
+# ---------------------------------------------------------------------------
+def _compute_lime(model: CustomCNN5_Brain, image_rgb: np.ndarray, class_idx: int) -> str:
+    """
+    Compute LIME explanation for the given image and class index.
+    Returns a base64 encoded PNG string.
+    """
+    explainer = lime_image.LimeImageExplainer()
+
+    def predict_fn(images: np.ndarray) -> np.ndarray:
+        batch = []
+        for img in images:
+            # Handle float or int array depending on LIME internal behaviour
+            img_uint8 = np.clip(img, 0, 255).astype(np.uint8)
+            pil_img = Image.fromarray(img_uint8)
+            tensor = _PREPROCESS(pil_img)
+            batch.append(tensor)
+        
+        batch_tensor = torch.stack(batch).to(next(model.parameters()).device)
+        with torch.no_grad():
+            logits = model(batch_tensor)
+            probs = F.softmax(logits, dim=1)
+        return probs.cpu().numpy()
+
+    explanation = explainer.explain_instance(
+        image_rgb,
+        predict_fn,
+        top_labels=4,
+        hide_color=0,
+        num_samples=250
+    )
+
+    temp, mask = explanation.get_image_and_mask(
+        class_idx,
+        positive_only=False,
+        num_features=10,
+        hide_rest=False
+    )
+    
+    lime_img = mark_boundaries(temp / 255.0 if temp.max() > 1.0 else temp, mask)
+    lime_img_uint8 = (np.clip(lime_img, 0, 1) * 255).astype(np.uint8)
+
+    buf = io.BytesIO()
+    Image.fromarray(lime_img_uint8).save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 def run_inference(model: CustomCNN5_Brain, image_bytes: bytes) -> dict:
@@ -349,8 +399,11 @@ def run_inference(model: CustomCNN5_Brain, image_bytes: bytes) -> dict:
     cam     = _compute_gradcam_pp(model, input_tensor, class_idx, model.features[12])
     heatmap = _create_overlay(original_rgb, cam)
 
+    # 4. LIME Explanation
+    lime_b64 = _compute_lime(model, original_rgb, class_idx)
+
     return {
         "predicted_class": predicted_class,
-        "confidence":      round(confidence, 6),
         "heatmap_image":   heatmap,
+        "lime_image":      lime_b64,
     }

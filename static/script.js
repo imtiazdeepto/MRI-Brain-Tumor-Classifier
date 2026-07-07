@@ -32,12 +32,9 @@ const stage3El       = document.getElementById('stage-3');
 
 const dxClass        = document.getElementById('dx-class');
 const dxDescription  = document.getElementById('dx-description');
-const ringProgress   = document.getElementById('ring-progress');
-const ringPct        = document.getElementById('ring-pct');
-const confBarFill    = document.getElementById('conf-bar-fill');
-const confBarPct     = document.getElementById('conf-bar-pct');
 const resultOriginal = document.getElementById('result-original');
 const resultHeatmap  = document.getElementById('result-heatmap');
+const resultLime     = document.getElementById('result-lime');
 const newScanBtn     = document.getElementById('new-scan-btn');
 
 const errorToast     = document.getElementById('error-toast');
@@ -47,8 +44,6 @@ const closeToastBtn  = document.getElementById('close-toast');
 /* ──────────────────────────────────────────────────────────
    Constants
    ────────────────────────────────────────────────────────── */
-/** Ring circumference: 2π × r=33 ≈ 207.345 */
-const RING_C = 2 * Math.PI * 33;
 
 /** Tumor class display config */
 const CLASS_CONFIG = {
@@ -283,30 +278,19 @@ function setAllStagesDone() {
 function showResults(data) {
   loadingSection.classList.add('hidden');
 
-  const cfg        = CLASS_CONFIG[data.predicted_class] ?? CLASS_CONFIG.notumor;
-  const confidence = Math.min(1, Math.max(0, data.confidence));  // clamp 0–1
-  const pct        = Math.round(confidence * 100);
+  const cfg = CLASS_CONFIG[data.predicted_class] ?? CLASS_CONFIG.notumor;
 
   /* ── Diagnosis text ── */
   dxClass.textContent       = cfg.label;
   dxClass.style.color       = cfg.color;
   dxDescription.textContent = cfg.description;
 
-  /* ── Ring (reset, then animate after paint) ── */
-  ringProgress.style.stroke          = cfg.color;
-  ringProgress.style.strokeDasharray = RING_C;
-  ringProgress.style.strokeDashoffset = RING_C;   // reset to empty
-  ringPct.textContent = `${pct}%`;
-  ringPct.style.color = cfg.color;
-
-  /* ── Linear bar (reset) ── */
-  confBarFill.style.background = cfg.color;
-  confBarFill.style.width      = '0%';
-  confBarPct.textContent       = `${pct}%`;
-
   /* ── Images ── */
   resultOriginal.src = objectURL;
   resultHeatmap.src  = `data:image/png;base64,${data.heatmap_image}`;
+  if (data.lime_image) {
+    resultLime.src = `data:image/png;base64,${data.lime_image}`;
+  }
 
   /* ── Show results section ── */
   resultsSection.classList.remove('hidden');
@@ -314,16 +298,6 @@ function showResults(data) {
   // Force reflow so animation re-triggers every time
   void resultsSection.offsetWidth;
   resultsSection.classList.add('animate-in');
-
-  // Defer animation triggers until after the section is painted
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      // Animate ring: offset goes from full circumference → (1 - confidence) × circumference
-      ringProgress.style.strokeDashoffset = RING_C * (1 - confidence);
-      // Animate bar
-      confBarFill.style.width = `${pct}%`;
-    });
-  });
 
   // Scroll results into view on mobile/tablet
   if (window.innerWidth <= 768) {
@@ -342,9 +316,7 @@ newScanBtn.addEventListener('click', () => {
   // Clear image state
   clearFile();
 
-  // Reset ring & bar so they don't flash stale values next time
-  ringProgress.style.strokeDashoffset = RING_C;
-  confBarFill.style.width = '0%';
+  // No visuals to reset
 
   // Show upload section
   uploadSection.classList.remove('hidden');
