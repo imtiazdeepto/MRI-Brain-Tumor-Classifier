@@ -1,121 +1,57 @@
-# LiteBrainNet: MRI Brain Tumor Classifier
+# NeuroScan: MRI Brain Tumor Classifier
 
-A professional, lightweight deep learning project for classifying brain MRI scans into four classes:
+Live App: **https://mri-brain-tumor-classifier.onrender.com/**
 
-- glioma
-- meningioma
-- notumor
-- pituitary
+NeuroScan is a FastAPI-based web app that classifies brain MRI scans into 4 classes and returns visual explanations.
 
-This project combines:
-- a compact custom CNN model
-- knowledge distillation from a stronger teacher model
-- explainability outputs (Grad-CAM++ and LIME)
-- a FastAPI web application for practical inference
+## What it does
+- Upload a brain MRI image
+- Predict one class: `glioma`, `meningioma`, `pituitary`, or `notumor`
+- Generate explainability outputs:
+  - Grad-CAM++ overlay
+  - LIME explanation image
 
-## Project Highlights
+## Live Usage
+1. Open the hosted app: https://mri-brain-tumor-classifier.onrender.com/
+2. Upload an MRI image (JPEG/PNG/BMP/TIFF/WebP)
+3. Click **Analyze Scan**
+4. View the diagnosis and explanation images
 
-- Lightweight student model (`CustomCNN5_Brain`) for efficient deployment
-- Distillation-ready pipeline for accuracy vs. model-size tradeoff
-- Grad-CAM++ heatmap generation for visual explanation
-- LIME explanation overlay for interpretable predictions
-- Simple web interface served by FastAPI
-- Production-friendly setup (`render.yaml`)
+## API
+Base URL (hosted): `https://mri-brain-tumor-classifier.onrender.com`
 
-## Tech Stack
+- `GET /health` — service and model readiness
+- `POST /predict` — upload image using `multipart/form-data` with field name `file`
+- Swagger docs: `/api/docs`
 
-- Python
-- PyTorch
-- FastAPI
-- OpenCV
-- NumPy
-- Pillow
-- LIME / scikit-image
-
-## Repository Structure
-
-```text
-MRI-Brain-Tumor-Classifier/
-├── main.py                         # FastAPI app and routes
-├── inference.py                    # Model, preprocessing, Grad-CAM++, LIME
-├── KD_T6.0_a0.8_latest.pth         # Trained model weights
-├── requirements.txt                # Python dependencies
-├── render.yaml                     # Deployment configuration
-├── static/
-│   ├── index.html                  # Frontend page
-│   ├── style.css                   # Frontend styles
-│   └── script.js                   # Frontend logic
-└── README.md
-```
-
-## Installation
-
+## Run Locally
 ```bash
 git clone https://github.com/imtiazdeepto/MRI-Brain-Tumor-Classifier.git
 cd MRI-Brain-Tumor-Classifier
-
 python -m venv venv
 source venv/bin/activate   # Linux/macOS
-# venv\Scripts\activate    # Windows
-
+# venv\Scripts\activate   # Windows
 pip install -r requirements.txt
-```
-
-## Run Locally
-
-```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Open:
+Local URLs:
 - App: `http://localhost:8000/`
-- API docs: `http://localhost:8000/api/docs`
+- API Docs: `http://localhost:8000/api/docs`
 
-## API Endpoints
-
-### `GET /health`
-Returns service and model readiness.
-
-Example response:
-
-```json
-{
-  "status": "ok",
-  "model_loaded": true
-}
+## Project Structure
+```text
+MRI-Brain-Tumor-Classifier/
+├── main.py
+├── inference.py
+├── KD_T6.0_a0.8_latest.pth
+├── requirements.txt
+├── render.yaml
+└── static/
 ```
-
-### `POST /predict`
-Upload one image (`multipart/form-data`, field name: `file`) and receive prediction with explainability images.
-
-Example response:
-
-```json
-{
-  "predicted_class": "meningioma",
-  "heatmap_image": "<base64_png>",
-  "lime_image": "<base64_png>"
-}
-```
-
-## How It Works
-
-1. Upload image
-2. Preprocess (decode → RGB → contour-based crop → resize to `240x240` → normalize)
-3. Predict class using `CustomCNN5_Brain`
-4. Generate Grad-CAM++ and LIME explanations
-5. Return result to frontend/API client
 
 ## Dataset
+- https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset
 
-- Brain Tumor MRI Dataset:  
-  https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset
-
-## Notes
-
-- Designed for research and educational use.
-- Not a replacement for clinical diagnosis.
-
-## License
-
-This project is released under the MIT License.
+## Disclaimer
+This tool is for research and educational use only and is not a clinical diagnostic system.
